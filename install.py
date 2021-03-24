@@ -9,35 +9,36 @@ running_user = getpass.getuser()
 if running_user != "root":
     command_prefix = "sudo "
 
-# first get some info for config
-input_ical_url = input("your ical-url: ")
-if not input_ical_url.startswith("https"):
-    raise Exception("Your ical-url must start with 'https://'")
-
-input_hcloud_api = input("your hetzner-cloud-api-key (with r/w access): ")
-if input_hcloud_api == "":
-    raise Exception("Your api-key is empty")
-
-input_random_token = input("The label 'token' you used to tag your hetzner-ressources: ")
-
-if input_random_token == "":
-    raise Exception("Your random-token is empty")
-
-# Write config.py
-print("write config.py")
-
 init_config_file = "assets/config.py.default"
 target_config_file = "config.py"
 
-init_config_file_content = Path(init_config_file).read_text(encoding="utf-8").replace(
-    "%YOUR_API_TOKEN%",input_hcloud_api).replace(
-    "%YOUR_IMAGE_TOKEN%", input_random_token ).replace(
-    "%YOUR_ICAL_URL%", input_ical_url)
+if not Path(target_config_file).exists():
+    # first get some info for config
+    input_ical_url = input("your ical-url: ")
+    if not input_ical_url.startswith("https"):
+        raise Exception("Your ical-url must start with 'https://'")
 
-try:
-    Path(target_config_file).write_text(data=init_config_file_content)
-except:
-    raise Exception(target_config_file + " could not be installed")
+    input_hcloud_api = input("your hetzner-cloud-api-key (with r/w access): ")
+    if input_hcloud_api == "":
+        raise Exception("Your api-key is empty")
+
+    input_random_token = input("The label 'token' you used to tag your hetzner-ressources: ")
+
+    if input_random_token == "":
+        raise Exception("Your random-token is empty")
+
+    # Write config.py
+    print("write config.py")
+
+    init_config_file_content = Path(init_config_file).read_text(encoding="utf-8").replace(
+        "%YOUR_API_TOKEN%",input_hcloud_api).replace(
+        "%YOUR_IMAGE_TOKEN%", input_random_token ).replace(
+        "%YOUR_ICAL_URL%", input_ical_url)
+
+    try:
+        Path(target_config_file).write_text(data=init_config_file_content)
+    except:
+        raise Exception(target_config_file + " could not be installed")
 
 #  install requirements into venv
 if platform.system() in ("Darwin", "Linux"):
