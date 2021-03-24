@@ -42,6 +42,9 @@ if not Path(target_config_file).exists():
 
 #  install requirements into venv
 if platform.system() in ("Darwin", "Linux"):
+    # we need pip
+    os.system("python3 -m pip install --user --upgrade pip")
+
     venv_path = os.getcwd() + "/venv/"
     venv_python_path = venv_path + "bin/python"
 
