@@ -94,20 +94,17 @@ Before you start installing, make sure to have following things in place:
 ### Installation
 1) clone this repository
     ```
-    git clone # TODO
+    git clone git@github.com:uroflavin/hcloud-calendar-automation.git
     ```
    
 2) change into the directory
     ```
     cd hcloud_calendar_automation/
     ```
-   
-3) update your config.py
-   ```
-   #TODO
-   ```
-   
-4) install virual environemt, requirements and systemd-service 
+
+3) install virual environemt, requirements and systemd-service 
     ```
     python3.9 install.py
     ```
+
+4) check config.py and systemd status
