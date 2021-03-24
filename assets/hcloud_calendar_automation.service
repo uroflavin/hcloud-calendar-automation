@@ -1,0 +1,11 @@
+[Unit]
+Description=service for hetzner cloud automation with the help of a public accessible (web/i)calendar
+After=multi-user.target
+
+[Service]
+Type=simple
+Restart=always
+ExecStart=%PATH_TO_VENV_PYTHON% %PATH_TO_MAIN%/main.py
+
+[Install]
+WantedBy=multi-user.target
