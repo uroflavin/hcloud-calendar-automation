@@ -77,11 +77,13 @@ try:
         logger.debug("'" + config.IMAGE_TOKEN + "' wait 60 seconds...")
         time.sleep(60)
 
-except KeyboardInterrupt:
-    logger.info("stopped processing")
-    print("stopped.")
 except SystemExit:
     logger.info("stopped processing")
     print("stopped.")
+
+except KeyboardInterrupt:
+    logger.info("stopped processing")
+    print("stopped.")
+
 except:
     logger.error("Something during processing went wrong")
