@@ -22,7 +22,6 @@ client = Client(token=config.API_TOKEN, poll_interval=config.HCLOUD_POOL_INTERVA
 
 # get server-state during Start
 server_is_running = hcloud_automation.first_server_is_running_or_starting(client, snapshot_token=config.IMAGE_TOKEN)
-last_server_was_running = server_is_running
 
 try:
     while True:
@@ -40,16 +39,12 @@ try:
                                                                  grid_timeslice=grid_timeslice,
                                                                  timeslice_grid_interval=config.TIMESLICE_GRID_INTERVAL)
 
-        logger.debug("server_should_run:" + str(server_should_run))
-        logger.debug("last_server_was_running:" + str(last_server_was_running))
+        logger.debug("server_should_run: " + str(server_should_run))
+        logger.debug("server_is_running: " + str(server_is_running))
 
         if server_should_run:
-            if last_server_was_running:
-                logger.debug("'" + config.IMAGE_TOKEN + "' should run now, and it IS running")
-                logger.debug("'" + config.IMAGE_TOKEN + "' Action: NONE")
-            else:
+            if not server_is_running:
                 server_is_running = hcloud_automation.first_server_is_running_or_starting(client, snapshot_token=config.IMAGE_TOKEN)
-                last_server_was_running = server_is_running
 
                 if server_is_running:
                     logger.debug("'" + config.IMAGE_TOKEN + "' should run now, and it IS running")
@@ -58,10 +53,13 @@ try:
                     logger.info("'" + config.IMAGE_TOKEN + "' should run now, but it IS NOT running")
                     logger.info("'" + config.IMAGE_TOKEN + "' Action: START Server...")
                     logger.info(hcloud_automation.create_server_from_snapshot(client, snapshot_token=config.IMAGE_TOKEN))
+            else:
+                logger.debug("'" + config.IMAGE_TOKEN + "' should run now, and it IS running")
+                logger.debug("'" + config.IMAGE_TOKEN + "' Action: NONE")
+
         elif not server_should_run:
-            if last_server_was_running:
+            if server_is_running:
                 server_is_running = hcloud_automation.first_server_is_running_or_starting(client, snapshot_token=config.IMAGE_TOKEN)
-                last_server_was_running = server_is_running
 
                 if server_is_running:
                     logger.info("'" + config.IMAGE_TOKEN + "' should NOT run now, but it IS running")
