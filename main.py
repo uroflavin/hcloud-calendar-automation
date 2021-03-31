@@ -40,8 +40,8 @@ try:
                                                                  grid_timeslice=grid_timeslice,
                                                                  timeslice_grid_interval=config.TIMESLICE_GRID_INTERVAL)
 
-        logger.debug("server_should_run:" + server_should_run)
-        logger.debug("last_server_was_running:" + last_server_was_running)
+        logger.debug("server_should_run:" + str(server_should_run))
+        logger.debug("last_server_was_running:" + str(last_server_was_running))
 
         if server_should_run:
             if last_server_was_running:
