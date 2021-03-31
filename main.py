@@ -80,5 +80,8 @@ try:
 except KeyboardInterrupt:
     logger.info("stopped processing")
     print("stopped.")
+except SystemExit:
+    logger.info("stopped processing")
+    print("stopped.")
 except:
     logger.error("Something during processing went wrong")
