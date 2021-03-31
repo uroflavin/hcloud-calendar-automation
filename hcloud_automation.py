@@ -57,9 +57,11 @@ def create_snapshot_for_first_server(client: Client, snapshot_token: str = IMAGE
 
         try:
             client.actions.get_by_id(response.action.id).wait_until_finished(max_retries=300)
+            logger.info("Snapshot for server '" + server.name + "' and token '" + snapshot_token + "' created.")
             return True, image_id
 
         except (ActionFailedException, ActionTimeoutException):
+            logger.error("Snapshot for server '" + server.name + "' and token '" + snapshot_token + "' failed.")
             return False, None
     except:
         return False, None
@@ -235,8 +237,8 @@ def create_server_from_snapshot(client: Client, snapshot_token=IMAGE_TOKEN) -> b
             labels=image.labels)
 
         # wait until server complete
-        logger.info("client.servers.create " + str(client.actions.get_by_id(response.action.id).wait_until_finished(
-            max_retries=300)))
+        client.actions.get_by_id(response.action.id).wait_until_finished(max_retries=300)
+        logger.info("Server '" + image.labels['server_name'] + "' for token '" + snapshot_token + "' created - Type is " + image.labels['server_type'])
 
     except (ActionFailedException, ActionTimeoutException) as e:
         logger.critical("Exception during server creation: Action Failed or Action Timeout")
