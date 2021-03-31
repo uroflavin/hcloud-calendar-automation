@@ -54,10 +54,7 @@ try:
                     logger.info("'" + config.IMAGE_TOKEN + "' Action: START Server...")
                     logger.info(hcloud_automation.create_server_from_snapshot(client, snapshot_token=config.IMAGE_TOKEN))
         elif not server_should_run:
-            if not last_server_was_running:
-                logger.debug("'" + config.IMAGE_TOKEN + "' should NOT run now and it IS NOT running")
-                logger.debug("'" + config.IMAGE_TOKEN + "' Action: NONE")
-            else:
+            if last_server_was_running:
                 server_is_running = hcloud_automation.first_server_is_running_or_starting(client, snapshot_token=config.IMAGE_TOKEN)
                 last_server_was_running = server_is_running
 
@@ -68,6 +65,9 @@ try:
                 else:
                     logger.debug("'" + config.IMAGE_TOKEN + "' should NOT run now and it IS NOT running")
                     logger.debug("'" + config.IMAGE_TOKEN + "' Action: NONE")
+            else:
+                logger.debug("'" + config.IMAGE_TOKEN + "' should NOT run now and it IS NOT running")
+                logger.debug("'" + config.IMAGE_TOKEN + "' Action: NONE")
         else:
             logger.error("Panic")
 
