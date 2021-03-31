@@ -18,9 +18,11 @@ logger.info("working-directory is " + os.getcwd())
 print("start processing...")
 print("working-directory is " + os.getcwd())
 
-last_server_was_running = False
-
 client = Client(token=config.API_TOKEN, poll_interval=config.HCLOUD_POOL_INTERVAL)
+
+# get server-state during Start
+server_is_running = hcloud_automation.first_server_is_running_or_starting(client, snapshot_token=config.IMAGE_TOKEN)
+last_server_was_running = server_is_running
 
 try:
     while True:
@@ -37,6 +39,9 @@ try:
         server_should_run = hcloud_calendar.check_should_run_now(grid_datetime=grid_datetime,
                                                                  grid_timeslice=grid_timeslice,
                                                                  timeslice_grid_interval=config.TIMESLICE_GRID_INTERVAL)
+
+        logger.debug("server_should_run:" + server_should_run)
+        logger.debug("last_server_was_running:" + last_server_was_running)
 
         if server_should_run:
             if last_server_was_running:
