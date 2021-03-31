@@ -168,9 +168,10 @@ def get_ical_data(url: str = "", token: str = None) -> bytes:
     # Token is used to identify different cache_files
     if token == "" or token is None:
         try:
+            logger.debug("Fetching a fresh copy of calendar-source, because we got no token...")
             return urllib.request.urlopen(url).read()
         except:
-            logger.error("Error fetchong calendar-source")
+            logger.error("Error fetching calendar-source")
             raise Exception("Error fetching calendar-source")
     else:
         cache_file = token + ".cache"
@@ -181,12 +182,15 @@ def get_ical_data(url: str = "", token: str = None) -> bytes:
                 age = datetime.datetime.now().timestamp() - Path(cache_file).stat().st_mtime
 
                 if age > max_age:
+                    logger.debug("Fetching a fresh copy of calendar-source, because max_age reached...")
                     ical_string = urllib.request.urlopen(url).read()
                     Path(cache_file).write_bytes(ical_string)
                 else:
+                    logger.debug("Using cached calendar-source...")
                     ical_string = Path(cache_file).read_bytes()
             # no local copy
             else:
+                logger.debug("Fetching a fresh copy of calendar-source, because we have no local copy...")
                 ical_string = urllib.request.urlopen(url).read()
                 Path(cache_file).write_bytes(ical_string)
             return ical_string
