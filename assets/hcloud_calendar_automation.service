@@ -4,7 +4,10 @@ After=multi-user.target
 
 [Service]
 Type=simple
+Environment=PYTHONUNBUFFERED=1
 Restart=always
+
+WorkingDirectory=%PATH_TO_MAIN%/
 ExecStart=%PATH_TO_VENV_PYTHON% %PATH_TO_MAIN%/main.py
 
 [Install]

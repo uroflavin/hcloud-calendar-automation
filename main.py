@@ -3,6 +3,7 @@ import hcloud_automation
 import config
 import hcloud_calendar
 import time
+import os
 
 import logging
 
@@ -12,7 +13,10 @@ logging.basicConfig(filename='error.log',
 logger = logging.getLogger("Application")
 
 logger.info("start processing...")
-print("is running...")
+logger.info("working-directory is " + os.getcwd())
+
+print("start processing...")
+print("working-directory is " + os.getcwd())
 
 last_server_was_running = False
 
