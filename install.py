@@ -73,19 +73,22 @@ if platform.system() == "Linux":
                                                                                        os.getcwd()).replace(
         "%PATH_TO_VENV_PYTHON%", venv_python_path)
 
-    service_name = init_service_file.split("/")[1]
+    service_name = os.getcwd().split("/")[-1] + ".service"
 
     target_service_file = path_to_systemd + service_name
 
     if Path(path_to_systemd).exists():
         try:
             Path(target_service_file).write_text(data=service_file_content)
+            print("service " + service_name + " installed")
         except:
             raise Exception(service_name + " could not be installed")
 
         os.system(command_prefix + "systemctl daemon-reload")
         os.system(command_prefix + "systemctl enable " + service_name)
+        print("service enabled " + service_name)
         os.system(command_prefix + "systemctl start " + service_name)
+        print("service started " + service_name)
     else:
         raise Exception(path_to_systemd + " did not exists. Is systemd installed?")
 else:
