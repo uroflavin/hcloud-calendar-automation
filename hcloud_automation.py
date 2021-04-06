@@ -290,6 +290,38 @@ def first_server_assign_floating_ip(client: Client, snapshot_token=IMAGE_TOKEN) 
     return True
 
 
+def first_server_assign_firewall(client: Client, snapshot_token=IMAGE_TOKEN) -> bool:
+    """Assig firewall for first found server for given snapshot_token
+
+    :param client: instance of hcloud.client()
+    :type client: hcloud.Client()
+    :param snapshot_token: unique token
+    which identify all your resources. this is mainly because one project can contain multiple servers and resources
+    at once
+    :type snapshot_token: str
+    :return: False in case of any error, otherwise True
+    :raise: Error if no snapshot image found
+    :rtype: bool
+    """
+    # grab firewall
+    response_firewall = client.firewalls.get_all(label_selector="token=" + snapshot_token)
+
+    server = client.servers.get_all(label_selector="token=" + snapshot_token)[0]
+    # assign firewall
+    if len(response_firewall) >= 1:
+        firewall = response_firewall[0]
+        #try:
+        response = client.firewalls.apply_to_resources(firewall, server)
+        # wait until server complete
+        client.actions.get_by_id(response.action.id).wait_until_finished(max_retries=300)
+        logger.info("Firewall applied")
+        #except (ActionFailedException, ActionTimeoutException) as e:
+        #    logger.critical("Exception assigning firewall: Action Failed or Action Timeout")
+        #    return False
+    return True
+
+
+
 def first_server_is_running_or_starting(client: Client, snapshot_token=IMAGE_TOKEN) -> bool:
     """Check if first found server for given snapshot_token is either starting or running
 
