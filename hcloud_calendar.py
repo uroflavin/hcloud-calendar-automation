@@ -1,4 +1,6 @@
 import datetime
+from urllib.error import URLError
+
 from dateutil import tz
 import icalendar
 import recurring_ical_events
@@ -10,6 +12,7 @@ logging.basicConfig(filename='error.log',
                     level=logging.DEBUG,
                     format='[%(filename)s:%(lineno)s - %(funcName)20s() ] %(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger("Application")
+
 
 def ceil(dt: datetime, interval: int) -> datetime:
     """
@@ -164,6 +167,8 @@ def get_ical_data(url: str = "", token: str = None) -> bytes:
 
     max_age = (60 * 60)  # 60 minutes * 60 seconds
     '''max_age is in seconds'''
+    max_age_in_case_of_error = max_age * 3
+    '''max_age_in_case_of_error is in seconds - its 3 times the time of max cache_file_age'''
 
     # Token is used to identify different cache_files
     if token == "" or token is None:
@@ -179,12 +184,25 @@ def get_ical_data(url: str = "", token: str = None) -> bytes:
         try:
             # check if we have a local copy
             if Path(cache_file).exists():
-                age = datetime.datetime.now().timestamp() - Path(cache_file).stat().st_mtime
-
-                if age > max_age:
-                    logger.debug("Fetching a fresh copy of calendar-source, because max_age reached...")
-                    ical_string = urllib.request.urlopen(url).read()
-                    Path(cache_file).write_bytes(ical_string)
+                cache_file_age = datetime.datetime.now().timestamp() - Path(cache_file).stat().st_mtime
+                if cache_file_age > max_age:
+                    logger.debug("Trying to fetch a fresh copy of calendar-source, because max_age reached...")
+                    try:
+                        logger.debug("Trying to get calendar-source...")
+                        ical_request = urllib.request.urlopen(url)
+                        logger.debug("Calendar-source is reachable - Using a fresh copy...")
+                        ical_string = ical_request.read()
+                        logger.debug("Storing a fresh copy of calendar-source in cache...")
+                        Path(cache_file).write_bytes(ical_string)
+                    # if calendar source is not reachable, try to handle this...
+                    except URLError:
+                        if cache_file_age < max_age_in_case_of_error:
+                            logger.debug("Calendar-source is not reachable - " +
+                                         "Using cached calendar-source within max_age_in_case_of_error...")
+                            ical_string = Path(cache_file).read_bytes()
+                        else:
+                            logger.error("Calendar-source is not reachable and max_age_in_case_of_error is reached")
+                            raise Exception("Calendar-source is not reachable and max_age_in_case_of_error is reached")
                 else:
                     logger.debug("Using cached calendar-source...")
                     ical_string = Path(cache_file).read_bytes()
@@ -197,4 +215,3 @@ def get_ical_data(url: str = "", token: str = None) -> bytes:
         except:
             logger.error("Error fetching-calendar-source")
             raise Exception("Error fetching calendar-source")
-
