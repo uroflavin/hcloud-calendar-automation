@@ -104,3 +104,4 @@ venv/*
 *.log
 # config
 config.py
+config*.py
