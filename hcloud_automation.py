@@ -119,6 +119,7 @@ def first_server_power_off(client: Client, snapshot_token: str = IMAGE_TOKEN) ->
 
         if server.status != "off":
             try:
+                logger.debug("Shutting down server...")
                 server.shutdown().wait_until_finished(max_retries=300)
             except (ActionFailedException, ActionTimeoutException):
                 return False
@@ -182,9 +183,10 @@ def delete_first_server(client: Client, snapshot_token: str = IMAGE_TOKEN) -> ob
         return False
 
 
-def create_server_from_snapshot(client: Client, snapshot_token=IMAGE_TOKEN) -> bool:
+def create_server_from_snapshot(client: Client, snapshot_token=IMAGE_TOKEN, override_server_type: str = '') -> bool:
     """Create a new server from first found snapshot for given snapshot_token
 
+    :param override_server_type: if given, the server_type from snapshot label is not used
     :param client: instance of hcloud.client()
     :type client: hcloud.Client()
     :param snapshot_token: unique token
@@ -216,10 +218,16 @@ def create_server_from_snapshot(client: Client, snapshot_token=IMAGE_TOKEN) -> b
     if len(response_ssh_keys) >= 1:
         ssh_keys = response_ssh_keys
 
+    server_type = image.labels['server_type']
+
+    if override_server_type != "":
+        server_type = override_server_type
+
     logger.info("Creating Server...")
     logger.info("Use :                 " + image.description)
     logger.info("Use server_name:      " + image.labels['server_name'])
-    logger.info("Use server_type:      " + image.labels['server_type'])  # ccx31
+    logger.info("Snapshot server_type: " + image.labels['server_type'])
+    logger.info("Use server_type:      " + server_type)  # ccx31
     logger.info("Use server_location:  " + image.labels['server_location'])  # nbg1
     logger.info("Use ssh-keys:         ")
 
@@ -228,7 +236,7 @@ def create_server_from_snapshot(client: Client, snapshot_token=IMAGE_TOKEN) -> b
     try:
         response = client.servers.create(
             name=image.labels['server_name'],
-            server_type=client.server_types.get_by_name(image.labels['server_type']),
+            server_type=client.server_types.get_by_name(server_type),
             image=client.images.get_by_id(image.id),
             user_data=user_data,
             location=client.locations.get_by_name(image.labels['server_location']),
@@ -238,7 +246,7 @@ def create_server_from_snapshot(client: Client, snapshot_token=IMAGE_TOKEN) -> b
 
         # wait until server complete
         client.actions.get_by_id(response.action.id).wait_until_finished(max_retries=300)
-        logger.info("Server '" + image.labels['server_name'] + "' for token '" + snapshot_token + "' created - Type is " + image.labels['server_type'])
+        logger.info("Server '" + image.labels['server_name'] + "' for token '" + snapshot_token + "' created - Type is " + server_type)
 
     except (ActionFailedException, ActionTimeoutException) as e:
         logger.critical("Exception during server creation: Action Failed or Action Timeout")
@@ -299,7 +307,7 @@ def first_server_is_running_or_starting(client: Client, snapshot_token=IMAGE_TOK
     which identify all your resources. this is mainly because one project can contain multiple servers and resources
     at once
     :type snapshot_token: str
-    :return: True if server is running or starting, otherwise False
+    :return: True if server is running or starting, otherwise False; in addition: server_type
     :raise: Error if no snapshot image found
     :rtype: bool
     """
@@ -307,12 +315,13 @@ def first_server_is_running_or_starting(client: Client, snapshot_token=IMAGE_TOK
     response_server = client.servers.get_all(label_selector="token=" + snapshot_token, status=server_status)
 
     if len(response_server) >= 1:
-        return True
+        return True, response_server[0].server_type.name
     else:
-        return False
+        return False, ''
 
 def destroy_first_server(client: Client, snapshot_token=IMAGE_TOKEN) -> bool:
     """Power off first server, create a snapshot, cleanup unused snapshots and lastly delete your server
+    Snapshot is only created, if the Server Type and the Label of the Server are identical.
 
     :param client: instance of hcloud.client()
     :type client: hcloud.Client()
@@ -325,16 +334,34 @@ def destroy_first_server(client: Client, snapshot_token=IMAGE_TOKEN) -> bool:
     :rtype: bool
     """
     try:
+
+        create_snapshot = True
         if first_server_power_off(client, snapshot_token=snapshot_token):
 
-            snapshot_created, image_id = create_snapshot_for_first_server(client, snapshot_token=snapshot_token)
+            # if this is a time-limited, non-persistable server, don't create a snapshot (see #8 for details)
+            # if the label server_type and your real server type is not the same, we threat this server as non-persistable
+            # a snapshot is only created, if your server type and server label are identical
+            servers = client.servers.get_all(label_selector="token=" + snapshot_token)
+            if len(servers) >= 1:
+                server = servers[0]
+                server_server_type = server.server_type.name
+                label_server_type = server.labels['server_type']
 
-            if snapshot_created:
-                keep_snapshots = [image_id]
+                if server_server_type != label_server_type:
+                    create_snapshot = False
 
-                delete_all_snapshots_for_token(client, snapshot_token=snapshot_token, keep_snapshots=keep_snapshots)
+            logger.debug("create_snapshot: " + str(create_snapshot))
 
-                delete_first_server(client, snapshot_token=snapshot_token)
+            if create_snapshot:
+
+                snapshot_created, image_id = create_snapshot_for_first_server(client, snapshot_token=snapshot_token)
+
+                if snapshot_created:
+                    keep_snapshots = [image_id]
+
+                    delete_all_snapshots_for_token(client, snapshot_token=snapshot_token, keep_snapshots=keep_snapshots)
+
+            delete_first_server(client, snapshot_token=snapshot_token)
 
         logger.info("Server destroyed")
         return True

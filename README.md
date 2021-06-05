@@ -66,7 +66,29 @@ Up to now, these scripts do not use any technical or application-specific monito
 The server is destroyed in the following condition:
 all calender-events + end_lag_time ar over and the next timeslice-grid-interval is reached.
 
+## Enable time-limited, non-persistable, machine-scaling
+Default mode is, to use only one configuration per combination of Hetzner project, label: token and calendar.
+In this mode, the server_type given in the snapshot is used to create any new machine.
 
+Temporary scaling and using some other server-type is also possible but needs some extra work and some extra caution.
+A typical use case for this feature is e.g. a videoconference server that has to temporarily host 100 participants for a meeting instead of the usual 10 and therefore needs more CPU and/or RAM.
+
+To do so, use the appointment-description in your calender.
+
+Create a new line and write "server_type: " followed by the type, your server should have e.g. "cpx11"
+Some line might look like this "server_type: cpx11". Thats all!
+
+To prevent any struggling with your default config, make shure to NOT overlap your appointments. Ideally you should have minimum one empty timeslice interval as a divider.
+[Hetzner's scaling feature](https://docs.hetzner.cloud/#server-actions-change-the-type-of-a-server) is currently neither used nor supported. This means: Changes to the server type during operation are not possible.
+
+For a little more detail see #8.
+
+** Be Aware**
+Three Points:
+1. Data lose is possible!
+2. This time limited scaling does not lead to the creation of new snapshots! If needed, do not use this feature, create a snapshot manually or implement some persistence in your application.
+3. Everything you need in your scaled environment has to be inside your snapshot (before server-creation/appointment start). So take care to adjust everything inside the snapshot before you use it scaled.
+  
 ## Installation
 ### Prepare your Hetzner-Cloud-Project
 Log into your Hetzner-Cloud-Project. Before you can use this scripts, you need a running and configured server.

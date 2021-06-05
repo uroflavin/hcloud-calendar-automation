@@ -1,4 +1,5 @@
 import datetime
+import os
 from urllib.error import URLError
 
 from dateutil import tz
@@ -30,6 +31,22 @@ def ceil(dt: datetime, interval: int) -> datetime:
     else:
         return dt
 
+def get_server_type_from_description(description: str = "") -> str:
+    """
+    Extract server_type from description
+    :param description: String, which might contain a key value pair in den form server_type: CX1234
+    :return: server_type or EMPTY String if not found
+    """
+    try:
+        server_type = ""
+        if "server_type:" in description:
+            lines = description.split(os.linesep)
+            for line in lines:
+                if line.startswith("server_type:"):
+                    server_type = line.split(":")[1].strip().lower()
+        return server_type
+    except:
+        return ""
 
 def get_datetime_and_timeslice_grid_for_now(ical_data: bytes = None, timezone_name: str = "Europe/Berlin",
                                             timeslice_grid_interval: int = 15, start_advanced_time: int = 15,
@@ -64,7 +81,8 @@ def get_datetime_and_timeslice_grid_for_now(ical_data: bytes = None, timezone_na
     ''' hold the timeinformation '''
     grid_timeslice = [False] * len(grid_datetime)
     ''' hold the run/not run information'''
-
+    grid_server_type = [''] * len(grid_datetime)
+    ''' hold the server_type information'''
     try:
         calendar = icalendar.Calendar.from_ical(ical_data)
         # todo: add timezone if calender has missing timezone info, for now, we raise an error
@@ -77,6 +95,19 @@ def get_datetime_and_timeslice_grid_for_now(ical_data: bytes = None, timezone_na
     for event in events:
 
         start = event["DTSTART"].dt
+
+        if "DESCRIPTION" in event:
+            description = event["DESCRIPTION"]
+        else:
+            description = ""
+
+        server_type = get_server_type_from_description(description)
+
+        if "SUMMARY" in event:
+            summary = event["SUMMARY"]
+        else:
+            summary = ""
+
         if start_advanced_time > 0:
             discard = datetime.timedelta(minutes=start_advanced_time)
             start -= discard
@@ -119,6 +150,7 @@ def get_datetime_and_timeslice_grid_for_now(ical_data: bytes = None, timezone_na
         idx = None
         for idx in range(idx_start, idx_end + 1, 1):
             grid_timeslice[idx] = True
+            grid_server_type[idx] = server_type
 
     # TODO: write code to fix the grid in a way, if there is only one not-run-slot between two running-slots
     #   eg. 11011 -> 11111
@@ -127,17 +159,20 @@ def get_datetime_and_timeslice_grid_for_now(ical_data: bytes = None, timezone_na
     logger.debug(grid_datetime)
     logger.debug("grid_timeslice")
     logger.debug(grid_timeslice)
-    return grid_datetime, grid_timeslice
+    logger.debug("grid_server_type")
+    logger.debug(grid_server_type)
+
+    return grid_datetime, grid_timeslice, grid_server_type
 
 
-def check_should_run_now(grid_datetime, grid_timeslice, timezone_name: str = "Europe/Berlin",
+def check_should_run_now(grid_datetime, grid_timeslice, grid_server_type, timezone_name: str = "Europe/Berlin",
                          timeslice_grid_interval: int = 15):
     """
-    Check calender-grids if server should run now
-    Default is False
+    Check calender-grids if server should run now and which server-type should be used
+    Default is False and ''
     :raise error if grids are not or wrong initialised
     """
-    if len(grid_timeslice) > 0 and len(grid_datetime) > 0:
+    if len(grid_timeslice) > 0 and len(grid_datetime) > 0 and len(grid_server_type) > 0:
         timezone = tz.gettz(timezone_name)
         now = datetime.datetime.now(timezone).replace(second=0, microsecond=0)
         ''' start_date is always round down to nearest timeslice_grid_interval'''
@@ -148,9 +183,9 @@ def check_should_run_now(grid_datetime, grid_timeslice, timezone_name: str = "Eu
 
         if now_ts in grid_datetime:
             idx = grid_datetime.index(now_ts)
-            return grid_timeslice[idx]
+            return grid_timeslice[idx], grid_server_type[idx]
         else:
-            return False
+            return False, ''
     else:
         logger.error("grids are not initialised or empty")
         raise Exception("Your grids are not initialised or empty")
